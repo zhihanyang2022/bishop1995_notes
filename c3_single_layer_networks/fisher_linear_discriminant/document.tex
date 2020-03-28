@@ -1,0 +1,255 @@
+\documentclass[12pt]{article}
+% We can write notes using the percent symbol!
+% The first line above is to announce we are beginning a document, an article in this case, and we want the default font size to be 12pt
+\usepackage[utf8]{inputenc}
+% This is a package to accept utf8 input.  I normally do not use it in my documents, but it was here by default in Overleaf.
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+% These three packages are from the American Mathematical Society and includes all of the important symbols and operations 
+\usepackage{fullpage}
+% By default, an article has some vary large margins to fit the smaller page format.  This allows us to use more standard margins.
+
+\setlength{\parskip}{1em}
+% This gives us a full line break when we write a new paragraph
+
+\newcommand\w{\vec{w}}
+\newcommand\wt{\vec{w}^T}
+\newcommand\msb{S_B}
+\newcommand\msw{S_W}
+
+\begin{document}
+	% Once we have all of our packages and setting announced, we need to begin our document.  You will notice that at the end of the writing there is an end document statements.  Many options use this begin and end syntax.
+	
+	\title{Notes on Fisher's Linear Discriminant}
+	\author{Zhihan Yang}
+	\maketitle
+	
+	\section{Binary classification problem}
+	
+	There are two classes, $C_1$ and $C_2$, each containing a non-zero number of data vectors, $\boldsymbol{x}^n$. For each class, $C_k$, we define some properties that will be used later on in this document.
+	
+	The number of vectors in class $k$ is given by $N_k$.
+	
+	The mean vector of class $k$ is given by:
+	$$\boldsymbol{m}_k=\frac{1}{N_k} \sum_{n \in C_1}\boldsymbol{x}^n$$
+	
+	The projected mean of class $k$ is given by:
+	$$m_k = \boldsymbol{w}^T \boldsymbol{m}_k$$
+	
+	The within-class variance of class $k$ is given by:
+	$$s_k = \sum_{n \in C_k}(y^n - m_k)^2$$
+	
+	
+	\section{Fisher's criterion}
+	
+	A linear combination between input variables, $x_i$, and weights $w_i$, can be written in vector form as: 
+	$$y=\boldsymbol{w}^T \boldsymbol{x}$$
+	where $y$ can be interpreted as the projection of $\boldsymbol{x}$ onto $\boldsymbol{w}$.
+	
+	Given two classes, $C_1$ and $C_2$, we would like to select a $\boldsymbol{w}$ such that the projection of $\boldsymbol{x}$ maximizes class separation. Intuitively, this means maximizing between-class separation while minimizing within-class separation. Mathematically, we define between-class separation as $(m_2 - m_1)^2$, and define within-class separation as $s_1^2+s_2^2$. We can complete the two optimization tasks simultaneously by maximizing the following ratio, known as the Fisher criterion:
+	
+	$$J(\boldsymbol{w}) = \frac{(m_2 - m_1)^2}{s_1^2+s_2^2}$$
+	
+	Now, the question remains: how do we find the optimal $\boldsymbol{w}$ to maximize $J(\boldsymbol{w})$?
+	
+	\section{The Fisher criterion in matrix form}
+	
+	It turns out that the Fisher criterion is more conveniently optimized in matrix form. In this section, we convert the algebraic form derived in the last section into its matrix form.
+	
+	Expand the numerator:
+	
+	\begin{align}
+	\text{numerator}(J(\boldsymbol{w}))
+	&= (m_2 - m_1)^2 \\	
+	&= (m_2 - m_1)(m_2 - m_1) \\
+	&= (\vec{w}^T \vec{x} - \vec{w}^T\vec{m_1}) (\vec{w}^T \vec{x} - \vec{w}^T\vec{m_2})
+	\end{align}
+	
+	where both factors are scalars, so the order of multiplication does not matter within each factor,
+	
+	\begin{align}
+	&= \vec{w}^T (\vec{x} - \vec{m}_1) (\vec{x} - \vec{m}_2)^T \vec{w}
+	\end{align}
+	
+	Since matrix multiplication is associative, i.e., $A(BC) = (AB) C$, we can rewrite the numerator as:
+	
+	$$\text{numerator}(J(\boldsymbol{w})) = \vec{w}^T S_B \vec{w}$$
+	
+	where $S_B = (\vec{x} - \vec{m}_1) (\vec{x} - \vec{m}_2)^T $ and is called the between-class covariance matrix.
+	
+	Expand the denominator (somewhat tedious):
+	
+	\begin{align}
+		\text{denominator}(J(\vec{w}))
+		&= s_1 ^ 2 + s_2 ^2  \\
+		&= \sum_{n \in C_1}(y^n - m_1)^2 + \sum_{n \in C_2}(y^n - m_2)^2 \\
+		&= 
+		 \sum_{n \in C_1} (\vec{w}^T \vec{x} - \vec{w}^T \vec{m}_1) ^ 2 +
+		 \sum_{n \in C_2} (\vec{w}^T \vec{x} - \vec{x}^T \vec{m}_2) ^ 2 \\
+		 &= 
+		 \sum_{n \in C_1} \vec{w}^T (\vec{x} - \vec{m}_1) (\vec{x} - \vec{m}_1)^T \vec{w} + 
+		 \sum_{n \in C_2} \vec{w}^T (\vec{x} - \vec{m}_2) (\vec{x} - \vec{m}_2)^T \vec{w} \\
+		&=
+		\vec{w}^T \{ \sum_{n \in C_1}  (\vec{x} - \vec{m}_1) (\vec{x} - \vec{m}_1)^T \} \vec{w} +
+	    \vec{w}^T \{ \sum_{n \in C_2}  (\vec{x} - \vec{m}_2) (\vec{x} - \vec{m}_2)^T \} \vec{w} \\
+	    &= 
+	    \vec{w}^T
+	    \{
+	    \sum_{n \in C_1}  (\vec{x} - \vec{m}_1) (\vec{x} - \vec{m}_1)^T+
+	    \sum_{n \in C_2}  (\vec{x} - \vec{m}_2) (\vec{x} - \vec{m}_2)^T
+	    \}
+	   	\vec{w} \\
+		&= \vec{w}^T S_W \vec{w}
+	\end{align}
+		
+	where $S_W= \sum_{n \in C_1}  (\vec{x} - \vec{m}_1) (\vec{x} - \vec{m}_1)^T+
+	\sum_{n \in C_2}  (\vec{x} - \vec{m}_2) (\vec{x} - \vec{m}_2)^T$  and is called the within-class covariance matrix.
+	
+	Putting the numerator and the denominator together, obtain:
+	
+	$$J(\vec{w}) = \frac{\vec{w}^T S_B \vec{w}}{\vec{w}^T S_W \vec{w}}$$
+		
+	\section{Fisher's linear discriminant}
+	
+	Since $J(\vec{w})$ involves $\vec{w}$ in a quadratic fashion, 
+	$\frac
+	{\partial J(\vec{w})}
+	{\partial \vec{w}}
+	$
+	involves $\vec{w}$ in a linear fashion and hence 
+	$\frac
+	{\partial J(\vec{w})}
+	{\partial \vec{w}} = 0
+	$
+	has a unique solution for $\vec{w}$. First, let's find 
+	$\frac
+	{\partial J(\vec{w})}
+	{\partial \vec{w}}
+	$.
+	
+	\begin{align}
+		J(\w) = \frac{\wt \msb \w}{\wt \msw \w}
+	\end{align}
+	
+	In order to obtain 
+	$\frac
+	{\partial J(\vec{w})}
+	{\partial \vec{w}}
+	$, 
+	we need the quotient rule for matrix calculus, which requires us to define the numerator, $u$, the denominator, $v$, the derivative of numerator, $u'$, and the derivative of denominator, $v'$. Let's define them below:
+	
+	$$u = \wt \msb \w$$
+	$$v = \wt \msw \w$$
+	
+	According to the Matrix Cookbook,
+	
+	$$u' = \frac{\partial u}{\partial \vec{w}} = (\msb + \msb^T) \w$$
+	
+	Derivation of $(\msb + \msb^T) \w = 2\msb\w$:
+	
+	$$
+	\begin{aligned} 
+	S_{B} &=\left(\vec{m}_{2}-\vec{m}_{1}\right)\left(\vec{m}_{2}-\vec{m}_{1}\right)^{T} \\ 
+	S_{B}^{\top} &= \left( \left(\vec{m}_2-\vec{m}_{1}\right)\left(\vec{m}_{2}-\vec{m}_{1}\right)^{T} \right)^T \\ 
+	&=\left(\vec{m}_{2}-\vec{m}_{1}\right)^{T T}\left(\vec{m}_2-\vec{m}_{1}\right)^{T} \\ &=\left(\vec{m}_{2}-\vec{m}_{1}\right)\left(\vec{m}_{2}-\vec{m}_{1}\right)^{T} \\ 
+    \end{aligned}
+	$$
+	
+	Therefore, $S_B^T = S_B$ and $u'=2S_B \vec{w}$. 
+	
+	Again, according to the Matrix Cookbook, 
+	
+	$$v' = \frac{\partial u}{\partial \vec{w}} = (\msw + \msw^T) \w$$
+	
+	Derivation of $ (\msw + \msw^T) \w = 2\msw\w$:
+	
+	$$S_{W} = \sum_{n \in C_{1}}\left(\vec{x}^{n}-\vec{m}_{1}\right)\left(\vec{x}^{n}-\vec{m}_{1}\right)^{T}+
+	\sum_{n \in C_{2}}\left(\vec{x}^{n}-\vec{m}_{2}\right)\left(\vec{x}^{n}-\vec{m}_{2}\right)^{T} $$
+	
+	Since a transpose of sums is a sum of transposes,
+	
+	$$
+	\begin{aligned} 
+	S_{W}^{T} 
+	&=\sum_{n \in C_{1}}\left[\left(\vec{x}^{n}-\vec{m}_{1}\right)\left(\vec{x}^{n}-\vec{m}_{1}\right)^{T}\right]^{T}+
+	\sum_{n \in C_{2}}\left[\left(\vec{x}^{n}-m_{2}\right)\left(\vec{x}^{n}-\vec{m}_{2}\right)^{T}\right]^{T} \\ 
+	&= \sum_{n \in C_{1}}\left(\vec{x}^{n}-\vec{m}_{1}\right)\left(\vec{x}^{n}-\vec{m}_{1}\right)^{T}+
+	\sum_{n \in C_{2}}\left(\vec{x}^{n}-\vec{m}_{2}\right)\left(\vec{x}^{n}-\vec{m}_{2}\right)^{T} \\
+	\end{aligned}
+	$$
+	
+	Therefore, $S_{W}^T = S_{W}$ and $u' = 2 S_W \vec{w}$.
+		
+	Using $u$, $u'$, $v$ and $v'$ and the quotient rule to find $\frac{\partial J(\vec{w})}{\partial \vec{w}}$:
+	
+	\begin{align}
+	\frac{\partial J(\vec{w})}{\partial \vec{w}}
+	&=\frac{u^{\prime} v-u v^{\prime}}{v^{2}} \\ 
+	&=\frac{\left(2 S_{B} \vec{w}\right)\left(\vec{w}^{\top} S_W \vec{w}\right)-\left(\vec{w}^{\top} S_{B} \vec{w}\right)\left(2 S_{w} \vec{w}\right)}{\left(\vec{w}^{\top} S_{W} \vec{w}\right)\left(\vec{w}^{\top} S_{W} \vec{w}\right)} \\ 
+	&=\frac{2 S_{B} \vec{w}}{\vec{w}^{\top} S_{W} \vec{w}}-\frac{\left(\vec{w}^{\top} S_{B} \vec{w}\right)\left(2 S_{W} \vec{w}\right)}{\left(\vec{w}^{\top} S_{W} \vec{w}\right)\left(\vec{w}^{\top} S_{W} \vec{w}\right)}
+	\end{align}
+	
+	Setting $\frac{\partial J(\vec{w})}{\partial \vec{w}}=0$ and solving for this equation:
+	
+	\begin{align}
+	\frac{\partial J(\vec{w})}{\partial \vec{w}}
+	&=0 \\
+	\frac{2 S_{B} \vec{w}}{\vec{w}^{T} S_{w} \vec{w}}
+	&=\frac{\left(\vec{w}^{T} S_{B} \vec{w}\right)\left(2 S_{w} \vec{w}\right)}{\left(\vec{w}^{T} S_{w} \vec{w}\right)\left(\vec{w}^{T} S_{w} \vec{w}\right)} \\
+	\underbrace{2\left(\vec{w}^{\top} S_{w} \vec{w}\right)}_{\text {scalar }} \left( S_{B} \vec{w}\right)
+	&=\underbrace{2 \left(\vec{w}^{\top} S_{B} \vec{w}\right)}_{\text {scalar }} \left(S_{w} \vec{w}\right)
+	\end{align}
+	
+	Since we do not care about the magnitude of $\vec{w}$, only its direction, we remove the scalars:
+	
+	$$S_{B} \vec{w} \propto S_{W} \vec{w}.$$
+	
+	Since $S_B = (\vec{m}_2 - \vec{m}_1)(\vec{m}_2 - \vec{m}_1)^T$ and $(\vec{m}_2 - \vec{m}_1)^T \vec{w}$ is a scalar, $S_B \vec{w}$ is always in the direction of $\vec{m}_2-\vec{m}_1$:
+	
+	$$(\vec{m}_2 - \vec{m}_1)\propto S_{W} \vec{w}$$
+	
+	Multiplying both sides by $S_W^{-1}$:
+	
+	$$\vec{w} \propto S_{W}^{-1}(\vec{m}_2 - \vec{m}_1)$$
+	
+	"This choice of $\vec{w}$ is known as Fisher’s linear discriminant, although it is strictly not a discriminant but rather a specific choice of direction for projection of data down to one dimension." (Bishop, 1995)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+\end{document}
