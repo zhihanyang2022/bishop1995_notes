@@ -4,6 +4,15 @@ This is a tutorial on how to convert data painted in Orange (saved as csv) into 
 
 The toy data set here is `data_not_linearly_separable.csv`.
 
+Import packages:
+
+```python
+import warnings
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+```
+
 Read in data and do a sanity check:
 
 ```python
@@ -16,7 +25,8 @@ Numerical values are stored as strings in a csv.
 First, convert strings that represent numerical values into numerical values and then into a numpy array:
 
 ```python
-samps = df[['x', 'y']][2:].convert_objects(convert_numeric=True).to_numpy()
+warnings.filterwarnings('ignore')
+examples = df[['x', 'y']][2:].convert_objects(convert_numeric=True).to_numpy()
 ```
 
 Then, convert labels (strings) into a numpy array and then into numerical values:
