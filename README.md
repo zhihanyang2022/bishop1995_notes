@@ -13,4 +13,4 @@ Where things are located:
     - `./c4_multi_layer_perceptron/circuluar_data.csv`
     - `./c4_multi_layer_perceptron/data_sophisticated_decision_boundary.csv`
 
-- To learn about how to use modules (with callback and lr-finding functionalities) in `./modules_for_nn_training`, see `./c4_multi_layer_perceptron/two_layer_network_universality_demo.ipynb`.
+- To learn about how to use modules (with callback and lr-finding functionalities) in `./modules_for_nn_training`, see `./c4_multi_layer_perceptron/two_layer_network_universality_and_jacobian_demo.ipynb`.
