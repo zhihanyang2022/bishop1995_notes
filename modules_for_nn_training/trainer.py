@@ -38,6 +38,8 @@ class Trainer:
         
     def find_lr(self, init_value=1e-6, final_value=10, num_itr=200, beta=0.98, skip_start=10, skip_end=5, show_suggestion=False):
         
+        self.save_as_pth('temp.pth')
+        
         mult = (final_value / init_value) ** (1 / num_itr)
         lr = init_value
         
@@ -101,6 +103,8 @@ class Trainer:
             show_suggestion
         )
         
+        self.load_from_pth('temp.pth')
+        
     def set_lr(self, lr):
         for param_group in self.learn.opt.param_groups:
             param_group['lr'] = lr
@@ -109,14 +113,14 @@ class Trainer:
         
         self.cb_handler.on_train_begin()
     
-        for epoch in tqdm_notebook(range(num_epoch)):
+        for epoch in tqdm_notebook(range(num_epoch), desc='Overall Progress'):
 
             self.cb_handler.on_epoch_begin()
 
             # ========== train ==========
 
             self.learn.model.train()
-            for xb, yb in self.learn.train_dl:
+            for xb, yb in tqdm_notebook(self.learn.train_dl, desc='Training', leave=False):
 
                 yhatb = self.learn.model(xb.float())
                 lossb = self.learn.loss(yhatb, yb.float())
@@ -128,7 +132,7 @@ class Trainer:
             # ========== validation ==========
 
             self.learn.model.eval()
-            for xb, yb in self.learn.valid_dl:
+            for xb, yb in tqdm_notebook(self.learn.valid_dl, desc='Validation', leave=False):
                 
                 self.cb_handler.on_batch_begin(yb=yb, bs=yb.size(0))  
                 # yb: for computing accuracy (in AccuracyCallback)
@@ -150,3 +154,6 @@ class Trainer:
         
     def save_as_pth(self, path):
         torch.save(self.learn.model.state_dict(), path)
+        
+    def load_from_pth(self, path):
+        self.learn.model.load_state_dict(torch.load(path))
