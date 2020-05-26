@@ -1,0 +1,452 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{ dsfont }
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{ amssymb }
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{framed,enumitem} 
+\usepackage{hyperref}
+
+\title{Tutorial on Principle Component Analysis and Data Whitening}
+\author{Zhihan Yang \\ Carleton College \\ yangz2@carleton.edu}
+\date{May 2020}
+
+\allowdisplaybreaks
+\newgeometry{vmargin={20mm}, hmargin={10mm, 10mm}}
+\setlength{\parindent}{0pt}
+\newcommand{\vecv}{\boldsymbol{v}}
+\newcommand{\vecx}{\boldsymbol{x}}
+\newcommand\myworries[1]{\textcolor{red}{#1}}
+
+
+\hypersetup{
+	colorlinks,
+	citecolor=black,
+	filecolor=black,
+	linkcolor=black,
+	urlcolor=black
+}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+TODO:
+
+\begin{itemize}
+	\item Add algorithm 2 for Whitening with option of PCA (done)
+	\item Add a table of content with hyperlinks for easy navigation (done)
+	\item Write section 3.6: the basic idea, first, using the elbow, second, for real world data, choose the number of components under 95 percent variance is captured
+	\item re-write the introduction
+	\item Read through sub-sections one at a time and tick them out
+	\item change principle component analysis to PCA
+\end{itemize}
+
+\section{Introduction}
+
+This document explains how Principle Component Analysis (PCA) works. 
+
+\section{Descriptors of data}
+Let's consider a data set $X$ as follows:
+
+$$X =  [\vecx^1, \cdots, \vecx^N] $$ where $\vecx^n$ is the $n$-th example (or data point) and $\vecx^n \in \mathds{R}^d$. The $j$ entry of $\vecx^n$ is denoted by $x^n_j$.
+
+\subsection{Mean}
+
+We may be interested in what a \textit{typical} data point look like for $X$. Therefore, we define a mean vector $\boldsymbol{\mu}$ as follows:
+
+$$\boldsymbol{\mu} \triangleq \frac{1}{N} \sum_{n=1}^N \vecx^n, $$ 
+
+and consequently, $\mu_j$, the $j$-component of $\boldsymbol{\mu}$, is defined as $ \frac{1}{N} \sum_{n=1}^N x^n_j$.
+
+\subsection{Covariance matrix}
+
+We may also be interested in the covariance between every pair of dimensions, i.e., the degree to which two variables are linearly associated. The covariance matrix, $\Sigma$, is essentially a lookup table where the $(i, j)$-th entry tells us the covariance between dimension $i$ and $j$. It is defined as follows:
+$$\Sigma \triangleq \frac{1}{N-1} \sum_{n=1}^N (\vecx_n - \boldsymbol{\mu})(\vecx_n - \boldsymbol{\mu})^T.$$ 
+
+To further appreciate this definition, we may expand the matrix-algebra notation above as follows:
+\begin{align*}
+\Sigma & \triangleq \frac{1}{N-1} \sum_{n=1}^N (\vecx_n - \boldsymbol{\mu})(\vecx_n - \boldsymbol{\mu})^T \\
+&\triangleq   \frac{1}{N-1} \sum_{n=1}^N
+\underbrace{
+	\begin{bmatrix}
+		x^n_1 - \mu_1 \\
+		\vdots \\
+		x^n_d - \mu_d
+	\end{bmatrix}
+	\begin{bmatrix}
+		x^n_1 - \mu_1 & \cdots & x^n_d - \mu_d
+	\end{bmatrix}
+}_{\text{Outer product}} \\
+&\triangleq  \frac{1}{N-1} \sum_{n=1}^N
+\begin{bmatrix}
+(x^n_1 - \mu_1)^2 & \cdots & (x^n_1 - \mu_1)(x^n_d - \mu_d) \\
+\vdots & \ddots & \vdots \\
+(x^n_d - \mu_d)(x^n_1 - \mu_1) & \cdots & (x^n_d - \mu_d)^2 \\
+\end{bmatrix} \\
+&\triangleq \begin{bmatrix}
+	\frac{1}{N-1} \sum_{n=1}^N(x^n_1 - \mu_1)^2 & \cdots & \frac{1}{N-1} \sum_{n=1}^N(x^n_1 - \mu_1)(x^n_d - \mu_d) \\
+	\vdots & \ddots & \vdots \\
+	\frac{1}{N-1} \sum_{n=1}^N(x^n_d - \mu_d)(x^n_1 - \mu_1) & \cdots & \frac{1}{N-1} \sum_{n=1}^N(x^n_d - \mu_d)^2 \\
+\end{bmatrix} \\
+\end{align*}
+where the $(i, j)$-th entry indeed tells us the covariance between dimension $i$ and $j$.
+
+\section{Principle component analysis (PCA)}
+
+\subsection{Linear projection of data to one dimension}
+
+Suppose we want to project our data set $X$ from $d$ dimensions to one dimension only. Formally, this can be done by projecting each example along some vector $\vecv$ as follows:
+
+$$\vecv^T X = [ \vecv^T \vecx^1 \cdots \vecv^T \vecx^N ].$$
+
+Projecting data from a large number of dimensions to a lower number is called \textit{dimensionality reduction}, which helps ameliorate the curse of dimensionality. A lower number of dimensions usually implies a lower number of tunable parameters in machine-learning models, which is more likely to be appropriately determined by a finite data set. However, this operation reduces the amount of information held in data. To minimize this consequence, we want to carefully tune the direction of $\vecv$ so that the variance of $\vecv^T X$ is maximized. We also want to constraint the norm of $\vecv$ to be a constant so that any increase in the variance of $\vecv^T X$ is not due to simple scalings.
+
+\subsection{Variance of projected data}
+
+First, let us derive an expression for the variance of $\vecv^T X$. Before we proceed, note that the mean for $\vecv^T X$ is simply $\vecv^T \boldsymbol{\mu}$; this step is left as a mental exercise for the reader. Then, the variance of $\vecv^T X$, which we shall denote by $\sigma^2$, can be computed as follows:
+\begin{align*}
+\sigma^2 &= \frac{1}{N-1} \sum_{n=1}^{N} (\vecv^T \vecx^n - \vecv^T \boldsymbol{\mu}) \\
+&=  \frac{1}{N-1} \sum_{n=1}^{N} (\vecv^T (\vecx^n - \boldsymbol{\mu}))^2 \\
+&= \frac{1}{N-1} \sum_{n=1}^{N} 
+\underbrace{
+	(\vecv^T (\vecx^n - \boldsymbol{\mu})(\vecx^n - \boldsymbol{\mu})^T \vecv)
+}_{\vecv \text{ is not dependent on } n} \\
+&= \vecv^T 
+\underbrace{
+	\left( \frac{1}{N-1} \sum_{n=1}^{N}  (\vecx^n - \boldsymbol{\mu})(\vecx^n - \boldsymbol{\mu})^T  \right) 
+}_{\text{Covariance matrix, } \Sigma}
+\vecv \\
+& = \vecv^T \Sigma \vecv
+\end{align*}
+
+\subsection{Maximize variance of projected data}
+
+Then, we deal with the following constrained optimization problem:
+\begin{align*}
+&\text{maximize } f(\vecv) = \vecv^T \Sigma \vecv \\
+&\text{subject to } ||\vecv||^2 = \vecv^T \vecv = 1
+\end{align*}
+which can be solved using the method of Lagrange multipliers, i.e., we define $f=\vecv^T \Sigma \vecv$ and $g=||\vecv||$ and solve for the system of equations:
+\begin{align*}
+&\nabla f |_{\vecv} = \lambda \nabla g |_{\vecv}\\
+&\vecv^T \vecv = 1
+\end{align*}
+
+We substitute $\nabla f |_{\vecv} = 2 \Sigma \vecv$ and $\nabla g |_{\vecv} = 2 \vecv$ into the system of equations above and obtain:
+\begin{align}
+&\Sigma \vecv = \lambda\vecv\\
+&\vecv^T \vecv = 1
+\end{align}
+
+Subtracting the RHS from both sides of (1) and factor, obtain:
+\begin{align}
+(\Sigma - \lambda I)\vecv=0
+\end{align}
+
+Since we already know that $\vecv \neq \vec{0}$ from (2), $\Sigma - \lambda I$ is not invertible because it transforms a non-zero vector to the zero vector. Therefore, its determinant is equal to zero, i.e., $\det(\Sigma - \lambda I)=0$. Solving this equation yields values of $\lambda$, each of which can be substituted back into (1) to obtain the \textit{form} of its corresponding $\vecv$. The constraint imposed by (2) can then be used to determine the values of the entries of the $\vecv$'s.
+
+\vspace{3mm}
+For those who are familiar with eigenvalues and eigenvectors, it is obvious from (2) that $\lambda$ is an eigenvalue of $\Sigma$ and $\vecv$ is an eigenvector of $\Sigma$. The \textit{principle axis} is simply the eigenvector of $\Sigma$ with the largest eigenvalue, which we denote by $\vecv_{\max}$. This is because 
+$\vecv_{\max}^T \Sigma \vecv_{\max}=\lambda_{\max}\vecv_{\max}^T\vecv_{\max}=\lambda_{\max}\geq \lambda$.
+
+\subsection{Interpretation of other eigenvectors of $\Sigma$ as non-primary principal components}
+
+Let us consider the original data but with its component along $\vecv_{\max}$ removed:
+$$\tilde{X} = X - \vecv_{\max} \vecv_{\max}^T X$$
+
+where $\vecv_{\max}^T X$ denotes the \textit{projection} (a scalar) of $X$ onto $\vecv_{\max}$ and correspondingly $\vecv \vecv_{\max}^T X$ denotes the \textit{component} (a vector) of $X$ along $\vecv_{\max}$. Intuitively, $\tilde{X}$ represents the part of $X$ whose variance was not captured by $\vecv_{\max}$. Therefore, it is interesting to consider, what would be the direction of projection that captures the most variance of $\tilde{X}$?
+
+\vspace{3mm}
+Formally, the projection of $\tilde{X}$ along some direction $\vecv$ can be written as:
+$$\vecv^T \tilde{X} = \vecv^T (X - \vecv_{\max} \vecv_{\max}^T X)$$
+Again, we constrain the norm of $\vecv$ to 1 for aforementioned reasons.
+
+\vspace{3mm}
+We are interested in maximizing the variance of the projection, $\vecv^T \tilde{X}$. The variance of $\vecv^T \tilde{X}$, which we shall denote by $\tilde{\sigma^2}$, can be computed as follows. Note the mean vector of $\vecv^T \tilde{X}$ is assumed to be zero; practically, this can be easily accomplished through a demean operation.
+
+\begin{align*}
+\tilde{\sigma^2} &= \frac{1}{N-1} \sum_{n=1}^N \{ \vecv^T (\vecx^n - \vecv_{\max} \vecv_{\max}^T \vecx^n) \}^2 \\
+&= \frac{1}{N-1} \sum_{n=1}^N \{  \vecv^T (\vecx^n - \vecv_{\max} \vecv_{\max}^T \vecx^n) (\vecx^n - \vecv_{\max} \vecv_{\max}^T \vecx^n)^T \vecv \} \\
+&=\vecv^T \left( \frac{1}{N-1} \sum_{n=1}^N
+ \{  
+ 	(\vecx^n - \vecv_{\max} \vecv_{\max}^T \vecx^n) 
+ 	\underbrace{(\vecx^n - \vecv_{\max} \vecv_{\max}^T \vecx^n)^T}_{\text{Distribute the transpose.}}
+\}  \right) \vecv \\
+&=\vecv^T \left( \frac{1}{N-1} \sum_{n=1}^N 
+	\underbrace{
+		\{  
+			(\vecx^n - \vecv_{\max} \vecv_{\max}^T \vecx^n) 
+			({\vecx^n}^T- {\vecx^n}^T \vecv_{\max} \vecv_{\max}^T)
+		\}
+	}_{\text{Simplify by removing the brackets.}}
+\right) \vecv \\
+&=\vecv^T \left( \underbrace{\frac{1}{N-1} \sum_{n=1}^N}_{\text{Distribute.}}
+\{  
+	\vecx^n {\vecx^n}^T 
+	- \vecx^n {\vecx^n}^T \vecv_{\max} \vecv_{\max}^T
+	- \vecv_{\max} \vecv_{\max}^T \vecx^n {\vecx^n}^T
+	+  \vecv_{\max} \vecv_{\max}^T \vecx^n {\vecx^n}^T \vecv_{\max} \vecv_{\max}^T
+\}
+\right) \vecv \\
+&=\vecv^T \left( 
+\frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \} 
+- \frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \vecv_{\max} \vecv_{\max}^T \} 
+\right.\\
+    &  \left. \qquad- \frac{1}{N-1} \sum_{n=1}^N \{ \vecv_{\max} \vecv_{\max}^T \vecx^n {\vecx^n}^T \} 
++ \frac{1}{N-1} \sum_{n=1}^N \{  \vecv_{\max} \vecv_{\max}^T \vecx^n {\vecx^n}^T \vecv_{\max} \vecv_{\max}^T \} 
+\right) \vecv \\
+&=\vecv^T \left( 
+\underbrace{\frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \}}_{\Sigma}
+- \underbrace{\frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \}}_{\Sigma} \vecv_{\max} \vecv_{\max}^T 
+\right.\\
+    & \left. \qquad- \vecv_{\max} \vecv_{\max}^T \underbrace{\frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \}}_{\Sigma}
++  \vecv_{\max} \vecv_{\max}^T \underbrace{ \frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \} }_{\Sigma} \vecv_{\max} \vecv_{\max}^T 
+\right) \vecv \\
+&=\vecv^T \left( 
+\Sigma 
+- \underbrace{ \Sigma \vecv_{\max}}_{\lambda_{\max}} \vecv_{\max} \vecv_{\max}^T 
+- \vecv_{\max} \underbrace{ \vecv_{\max}^T \Sigma }_{(\Sigma \vecv_{\max})^T = \lambda_{\max} \vecv^T}
++  \vecv_{\max} \vecv_{\max}^T \underbrace { \Sigma \vecv_{\max} }_{\lambda_{\max} \vecv} \vecv_{\max}^T 
+\right) \vecv \\
+&=\vecv^T \left( 
+\Sigma 
+- \lambda_{\max} \vecv_{\max} \vecv_{\max}^T 
+- \lambda_{\max}\vecv_{\max} \vecv_{\max}^T
++ \lambda_{\max} \vecv_{\max} \underbrace{ \vecv_{\max}^T \vecv_{\max} }_{1} \vecv_{\max}^T 
+\right) \vecv \\
+&=\vecv^T \left( 
+\Sigma 
+- \lambda_{\max} \vecv_{\max} \vecv_{\max}^T 
+- \lambda_{\max}\vecv_{\max} \vecv_{\max}^T
++ \lambda_{\max} \vecv_{\max} \vecv_{\max}^T 
+\right) \vecv \\
+&=\vecv^T \left( 
+\Sigma 
+- \lambda_{\max} \vecv_{\max} \vecv_{\max}^T 
+\right) \vecv \\
+&=\vecv^T \Sigma^{\text{new}} \vecv
+\end{align*}
+where we have defined $\Sigma^{\text{new}} = \Sigma - \lambda_{\max} \vecv_{\max} \vecv_{\max}^T $.
+
+\vspace{3mm}
+Similar to how we obtained equation (1), we obtain:
+\begin{align*}
+\Sigma^{\text{new}} \vecv &= \lambda \vecv \\
+(\Sigma - \lambda_{\max} \vecv_{\max} \vecv_{\max}^T ) \vecv &=\lambda \vecv \\
+\Sigma \vecv - \lambda_{\max} \vecv_{\max} \vecv_{\max}^T \vecv &= \lambda \vecv 
+\end{align*}
+where $\lambda$ denotes the Lagrange Multiplier. Note that all eigenvectors of $\Sigma$ are solutions of this equation. To see this clearly, consider two cases: (1) $\vecv \neq \vecv_{\max}$ and (2) $\vecv = \vecv_{\max}$.  First, suppose $\vecv \neq \vecv_{\max}$. Notice how $\lambda_{\max} \vecv_{\max} \vecv_{\max}^T \vecv$ becomes zero when $\vecv \neq \vecv_{\max}$ since the eigenvectors of a symmetric matrix (in the case, the covariance matrix) are orthogonal; all that's left is $\Sigma \vecv=\lambda \vecv$. Therefore, the eigenvalues for all $\vecv \neq \vecv_{\max}$ is untouched. Second, suppose $\vecv = \vecv_{\max}$. Notice how $\lambda_{\max} \vecv_{\max} \vecv_{\max}^T \vecv$ becomes $\lambda_{\max}\vecv_{\max}$; \myworries{the LHS of equation of n} becomes $\Sigma \lambda_{\max} - \lambda_{\max}\vecv_{\max} = \lambda_{\max}\vecv_{\max} - \lambda_{\max}\vecv_{\max} = 0$. Therefore, the new eigenvalue of $\vecv_{\max}$ is now zero.
+
+\vspace{3mm}
+Clearly, the direction of projection that leads to max variance would be the vector $v_{\max'}$ with the largest eigenvalue of $\Sigma^{\text{new}}$, which is the second largest largest eigenvalue of $\Sigma$. This is because $\vecv_{\max'}^T \Sigma^{\text{new}} \vecv_{\max'} = \lambda_{\max'} \vecv_{\max'}^T \vecv_{\max'} = \lambda_{\max'} \geq \lambda$.
+
+\vspace{3mm}
+TODO: clearly, what's done here can be repeated for the component along both primary and secondary principle component being reduced. Therefore, we conclude that, when we want to use $k$ components to capture the maximum variance, we should choose the $k$ components corresponding to the $k$ largest eigenvalues.
+
+\subsection{Implementation of PCA}
+
+In the previous two sub-sections, we discussed the interpretation of eigenvectors of the covariance matrix derived from some data set. Here, we simply show how PCA can be implemented. The following implementation is not guaranteed to be the most efficient; however, it can be easily coded using numerical computing packages such as Numpy (a library in Python).
+
+\SetKwInput{KwInput}{Input} 
+\SetKwFunction{cov}{cov}
+\SetKwFunction{eig}{eig}
+\SetKwInput{KwOutput}{Output}  
+
+\vspace{3mm}
+\begin{algorithm}[H]
+	\DontPrintSemicolon
+	
+	\caption{PCA}
+	
+	\vspace{1mm}
+	\KwInput{data set $X$ (shape: $(d, N)$) with zero mean and unit variance, number of components $M$}
+	
+	\KwOutput{projected data $Y$ (shape: $(M, N)$)}
+	
+	\vspace{1mm}
+	First, We define the following functions; they are already implemented in many packages so we won't bother repeating.
+	
+	\vspace{1mm}
+    1) \cov{$X$} = $XX^T$ 
+    
+    \vspace{1mm}
+    * It computes the covariance matrix of $X$.
+	
+	\vspace{1mm}
+	2) \eig{$\Sigma$} = $(\Lambda, U)$ 
+	
+	\vspace{1mm}
+	* It computes eigenvalues ($\Lambda = \text{diag}(\lambda_1, \cdots, \lambda_i, \cdots, \lambda_d)$) and eigenvectors ($U$) of $\Sigma$. Note that the eigenvalue contained as the $i$-th diagonal element of $\Lambda$ corresponds to the eigenvector contained as the $i$-th column vector of $U$.
+	
+	\vspace{1mm}
+	Then, $\Sigma = \text{cov}(X)$; $\Lambda, U = \text{eig}(\Sigma)$.
+		
+	\vspace{1mm}
+	Then, sort the eigenvalues such that the top-most eigenvalue is the largest eigenvalue; sort the eigenvectors accordingly.
+	
+	\vspace{1mm}
+	Then, since we have decided to only project $X$ along the first $M$ principal components, we compute $Y = U[:, {:}M]^T X$, where $U[:, {:}M]^T$ has shape $(M, d)$.
+    
+    \vspace{1mm}
+	Finally, output $Y$.
+	
+	\vspace{1mm}
+\end{algorithm}
+
+
+\subsection{Importance of normalizing input data}
+
+Real-world data sets tend to have features with wildly different scales. For example, in the UCI wine-quality (red wine) data set available at [UCI wine-quality dataset], feature ... have a variance of ... and feature ... have a variance of ... . Given this combination, it is obvious that the direction of projection that would give the most variance is closer to the first feature.
+
+Require more thought
+
+First, scale does not change information. Conversely, we don't know 
+
+
+
+
+ http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv
+
+
+Changing the scale of a feature does not change the information it is describing. 
+
+\subsection{Heuristics for picking the number of principal components}
+
+\section{Data whitening}
+
+Given a data set containing $d$ features, we can linearly transform the data set to obtain a identity covariance matrix, without loss of information. This technique is called \textit{data whitening} because (1) the variance of each feature is one and (2) features are completely de-correlated. These properties are often beneficial to or assumed by downstream classifiers. 
+
+\vspace{3mm}
+In my opinion, an excellent starting point is to consider the covariance matrix of $M$ features outputted by PCA, where $M \leq d$. Recall that these $M$ features are obtained by projecting the data set onto the $M$ eigenvectors with the largest eigenvalues.
+
+\subsection{Covariance matrix of PCA output}
+
+We consider diagonal and off-diagonal elements separately.
+
+\vspace{3mm}
+\textbf{Diagonal elements.} Consider the $i$-th PCA feature. This feature contains the projection of data onto $\vecv_i$, where $i$ denotes the fact that $\vecv_i$ has the $i$-th largest eigenvalue. Assuming that we have normalized each feature of the original data set to have zero mean and unit variance, all features of PCA output would have zero mean. Therefore, the variance of the $i$-th PCA feature can be computed as follows:
+\begin{align*}
+\sigma_{i}^2 &=  \vecv_i^T \Sigma \vecv_i \\
+&=  \lambda_i  \vecv_i^T \vecv_i \\
+&= \lambda_i
+\end{align*}
+
+\textbf{Off-diagonal elements.} Consider the $i$-th and $j$-th PCA feature. The covariance between these two features can be computed as follows:
+\begin{align*}
+\sigma_{i, j}^2 &= \frac{1}{N-1} \sum_{n=1}^N \{ (\vecv_i^T \vecx^n) (\vecv_j^T \vecx^n)^T \}\\
+&=  \frac{1}{N-1} \sum_{n=1}^N \{ \vecv_i^T \vecx^n {\vecx^n}^T \vecv_j \} \\
+&=  \vecv_i^T \frac{1}{N-1} \sum_{n=1}^N \{  \vecx^n {\vecx^n}^T \} \vecv_j \\
+&=  \vecv_i^T \Sigma \vecv_j \\
+&=  \lambda_j  \underbrace{\vecv_i^T \vecv_j}_{\text{Orthogonal}} \\
+&= 0
+\end{align*}
+
+Therefore, the covariance matrix of the PCA features is diagonal, with the $i$-th diagonal elements being the variance of the $i$-th PCA feature, which is $\lambda_i$. Recall that one of the goals of data whitening is to transform the data so that the covariance matrix is the identity matrix (diagonal and all diagonal elements are one). Here, by applying PCA, we have already completed the first part of this goal, that is, making the covariance matrix diagonal. 
+
+\vspace{3mm}
+Importantly, the interpretation of the results above \textit{depends on what we want to whiten}. 
+\begin{itemize}
+
+	\item If we want to whiten the PCA output, the good news is that we are already halfway done. This is true regardless whether $M < d$ or $M = d$.
+
+	\item  On the other hand, if we want to whiten the original data set from which the PCA output is derived, we would need to beforehand set the number of principal components kept by PCA to $d$, the dimensionality of the original data set so that no information is discarded by PCA. Since the original data lives in a $d$-dimensional space, each data point can be expressed in terms of a set of $d$ orthonormal vectors, e.g.., the set of \textit{all} eigenvectors of $\Sigma$ that represents projection directions.
+	
+\end{itemize}
+In both cases, the assumption of no information loss holds. 
+
+\subsection{Normalize diagonal elements of covariance matrix to ones}
+
+In the previous sub-section, we saw that the covariance matrix derived from the output of PCA is diagonal. Now, let's consider what to do next to normalize its diagonal elements to one. Recall from the previous sub-section that the variance of the $i$-th feature, $\sigma_i^2$, is $\lambda_i$. We want the new variance of the $i$-th feature, which we shall denote by ${ \sigma'_i}^2$, to be one. Since $\sigma_i^2 / \lambda_i = 1 = { \sigma'_i}^2$, we have:
+\begin{align*}
+\sigma_i'^2 &= \frac{\sigma_i^2}{\lambda_i} \\
+&= \frac{\vecv_i^T \Sigma \vecv_i}{\lambda_i} \\
+&= \vecv_i^T \frac{\Sigma}{\lambda_i} \vecv_i \\
+&= \vecv_i^T \frac{\frac{1}{N-1} \sum_{n=1}^N \{ \vecx^n {\vecx^n}^T \} }{\lambda_i} \vecv_i \\
+&= \vecv_i^T \frac{1}{N-1} \sum_{n=1}^N \{ \lambda_i^{-1} \vecx^n {\vecx^n}^T \} \vecv_i \\
+&= \vecv_i^T \frac{1}{N-1} \sum_{n=1}^N \{ (\lambda_i^{-1/2} \vecx^n)({\lambda_i^{-1/2} \vecx^n}^T) \} \vecv_i \\
+\end{align*}
+which means to we should multiple the $i$-th feature by $\lambda_i^{-1/2}$.
+
+\vspace{3mm}
+Now, let's consider what this operation looks like in \textit{matrix form}. The projections of original data set $X$ along $M$ principal components can be expressed as (Algorithm 1):
+
+$$Y = U[:,{:}M]^T X$$ 
+
+where $Y$ denotes the output of PCA. As we've derived above, for the covariance of $Y$ to be the identity matrix, we need to multiply each feature by its corresponding eigenvalue raised to $-1/2$ power:
+
+$$Y = \Lambda^{-1/2}[{:}M, {:}M] U[:,{:}M]^T X$$ 
+
+where $\Lambda^{-1/2}$ denotes the matrix whose $i$-th diagonal element is $\lambda_i^{-1/2}$ (Algorithm 1).
+
+\subsection{Implementation of data whitening}
+
+In two previous sub-sections, we discussed about thinking of data whitening as two distinct steps: PCA and normalization of diagonal elements. Since we can choose to either keep all principal components or only a part, this choice determines whether we are talking about data whitening for original data or whitening for projected data. A more detailed analysis of the relationship between PCA and data whitening is given in section 5. Here, we simply outline the steps required to implement data whitening.
+
+\SetKwInput{KwInput}{Input} 
+\SetKwFunction{cov}{cov}
+\SetKwFunction{eig}{eig}
+\SetKwInput{KwOutput}{Output}  
+
+\vspace{3mm}
+\begin{algorithm}[H]
+	\DontPrintSemicolon
+	
+	\caption{Data whitening}
+	
+	\vspace{1mm}
+	\KwInput{data set $X$ (shape: $(d, N)$) with zero mean and unit variance, number of components $M$}
+	
+	\KwOutput{
+		\begin{itemize}
+			\item If $M = d$, we have whitened data $\tilde{Y}$ (shape: $(d, N)$).
+			\item If $M < d$, we have whitened projected data $\tilde{Y}$ (shape: $(M, N)$).
+		\end{itemize}
+	}
+	
+    First, run PCA (Algorithm 1) on \textbf{Input} and compute $Y = U[:,{:}M]^T X$ and additionally $\Lambda$ as PCA output.
+    
+    \vspace{1mm}
+    * Note that the covariance matrix of $Y$ is now \textit{diagonal} according to sub-section 4.1.
+    
+    \vspace{1mm}
+    Then, compute $\tilde{Y} = \Lambda^{-1/2} Y$. 
+    
+    \vspace{1mm}
+    * Note that the covariance matrix of $\tilde{Y}$ is now \textit{an identity matrix} according to sub-section 4.2.  
+    
+    \vspace{1mm}
+   	Finally, output $\tilde{Y}$.
+    
+    \vspace{1mm}
+\end{algorithm}
+
+\section{Summary of relationship between PCA and data whitening}
+
+Simply put, PCA helps us achieve the first step of data whitening. Nevertheless, it is helpful to consider the following 4 cases to better understand their relationship:
+
+\begin{itemize}[itemindent=2em]
+	
+	\item[Case 1.] $M < d$, $Y = U[:,:M]^T X$ (PCA). 
+	
+	We have (1) a diagonal covariance matrix of $Y$ and (2) dimensionality reduction / information loss.
+	
+	\item[Case 2.] $M < d$, $Y = \Lambda^{-1/2} U[:,:M]^T X$ (data whitening, which involves PCA).
+	
+	We have (1) an identity covariance matrix of $Y$ and (2) dimensionality reduction / information loss.
+	
+	\item[Case 3.] $M = d$, $Y = U[:,:M]^T X$ (PCA). 
+	
+	We have (1) a diagonal covariance matrix of $Y$ and (2) dimensionality is unchanged.
+	
+	\item[Case 4.] $M < d$, $Y = \Lambda^{-1/2} U[:,:M]^T X$ (data whitening, which involves PCA).
+	
+	We have (1) an identity covariance matrix of $Y$ and (2) dimensionality is unchanged.
+\end{itemize}
+
+\end{document}

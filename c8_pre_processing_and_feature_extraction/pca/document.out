@@ -1,0 +1,17 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Descriptors of data}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Mean}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Covariance matrix}{section.2}% 4
+\BOOKMARK [1][-]{section.3}{Principle component analysis \(PCA\)}{}% 5
+\BOOKMARK [2][-]{subsection.3.1}{Linear projection of data to one dimension}{section.3}% 6
+\BOOKMARK [2][-]{subsection.3.2}{Variance of projected data}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.3}{Maximize variance of projected data}{section.3}% 8
+\BOOKMARK [2][-]{subsection.3.4}{Interpretation of other eigenvectors of \040as non-primary principal components}{section.3}% 9
+\BOOKMARK [2][-]{subsection.3.5}{Implementation of PCA}{section.3}% 10
+\BOOKMARK [2][-]{subsection.3.6}{Importance of normalizing input data}{section.3}% 11
+\BOOKMARK [2][-]{subsection.3.7}{Heuristics for picking the number of principal components}{section.3}% 12
+\BOOKMARK [1][-]{section.4}{Data whitening}{}% 13
+\BOOKMARK [2][-]{subsection.4.1}{Covariance matrix of PCA output}{section.4}% 14
+\BOOKMARK [2][-]{subsection.4.2}{Normalize diagonal elements of covariance matrix to ones}{section.4}% 15
+\BOOKMARK [2][-]{subsection.4.3}{Implementation of data whitening}{section.4}% 16
+\BOOKMARK [1][-]{section.5}{Summary of relationship between PCA and data whitening}{}% 17
