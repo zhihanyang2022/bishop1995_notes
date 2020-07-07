@@ -1,3 +1,4 @@
+import os
 import math
 import numpy as np
 from tqdm import tqdm_notebook
@@ -116,6 +117,7 @@ class Trainer:
         )
         
         self.load_from_pth('temp.pth')
+        os.remove('temp.pth')
         
     def set_lr(self, lr):
         for param_group in self.learn.opt.param_groups:
