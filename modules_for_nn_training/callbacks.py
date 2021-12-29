@@ -3,12 +3,24 @@ class Callback(object):
     
     def on_train_begin(self): pass
     def on_epoch_begin(self): pass
-    def on_batch_begin(self): pass
+     
+    # =================================
     
-    def on_forward_end(self): pass  # yhatb is available for computing accuracy
-    def on_loss_end(self): pass  # loss is available
+    def on_batch_begin(self): pass  # add xb and yb to state_dict
+    def on_loss_end(self): pass
+    def on_backward_begin(self): pass  # additional loss terms might be available (e.g., tangent prop)
     
-    def on_batch_end(self): pass
+    # =================================
+    # callback functions for validation
+    # =================================
+    
+    def eval_on_batch_begin(self): pass  # add xb and yb to state_dict
+    def eval_on_forward_end(self): pass  # yhatb is available for computing accuracy
+    def eval_on_loss_end(self): pass  # loss is available
+    def eval_on_batch_end(self): pass
+    
+    # =================================
+    
     def on_epoch_end(self): pass
     def on_train_end(self): pass
     
@@ -38,30 +50,55 @@ class CallbackHandler(Callback):
     def on_batch_begin(self, **kwargs):
         
         self.state_dict['batch_index'] += 1
-        
+        self.state_dict['xb'] = kwargs['xb']  # e.g., tangent prop
         self.state_dict['yb'] = kwargs['yb']  # for computing accuracy
-        self.state_dict['bs'] = kwargs['bs']  # for computing any metric
+        self.state_dict['bs'] = kwargs['bs']
         
         for cb in self.cbs:
             cb.on_batch_begin()
             
-    def on_forward_end(self, **kwargs):
-        
-        self.state_dict['yhatb'] = kwargs['yhatb']  # for computing accuracy
-        
-        for cb in self.cbs:
-            cb.on_forward_end()
-            
-    def on_loss_end(self, **kwargs): 
+    def on_loss_end(self, **kwargs):
         
         self.state_dict['lossb'] = kwargs['lossb']  # for computing loss
         
         for cb in self.cbs:
-            cb.on_loss_end()
+            cb.eval_on_loss_end()
             
-    def on_batch_end(self): 
+    def on_backward_begin(self, **kwargs):
+        
+        #  model parameters might be required to calculate additional loss terms (e.g., if related to Jacobian / Hessian)
+        self.state_dict['model'] = kwargs['model'] 
+        
         for cb in self.cbs:
-            cb.on_batch_end()
+            cb.on_backward_begin()
+            
+    def eval_on_batch_begin(self, **kwargs):
+        
+        self.state_dict['batch_index'] += 1
+        self.state_dict['xb'] = kwargs['xb']  # e.g., tangent prop
+        self.state_dict['yb'] = kwargs['yb']  # for computing accuracy
+        self.state_dict['bs'] = kwargs['bs']  # for computing any metric
+        
+        for cb in self.cbs:
+            cb.eval_on_batch_begin()
+            
+    def eval_on_forward_end(self, **kwargs):
+        
+        self.state_dict['yhatb'] = kwargs['yhatb']  # for computing accuracy
+        
+        for cb in self.cbs:
+            cb.eval_on_forward_end()
+            
+    def eval_on_loss_end(self, **kwargs): 
+        
+        self.state_dict['lossb'] = kwargs['lossb']  # for computing loss
+        
+        for cb in self.cbs:
+            cb.eval_on_loss_end()
+            
+    def eval_on_batch_end(self): 
+        for cb in self.cbs:
+            cb.eval_on_batch_end()
             
     def on_epoch_end(self): 
         for cb in self.cbs:

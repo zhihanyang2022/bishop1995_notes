@@ -1,3 +1,5 @@
+import os
+import math
 import numpy as np
 from tqdm import tqdm_notebook
 import matplotlib
@@ -58,17 +60,28 @@ class Trainer:
         
         self.learn.model.train()
         
+        self.cb_handler.on_train_begin()
+        
         for epoch in range(num_epochs):
+            
+            self.cb_handler.on_epoch_begin()
         
             for xb, yb in self.learn.train_dl:
 
+                self.cb_handler.on_batch_begin(xb=xb, yb=xb, bs=xb.size(0))
+                
                 batch_num += 1
                 if batch_num > num_itr: 
                     is_stop = True
                     break
 
                 yhatb = self.learn.model(xb.float())
-                lossb = self.learn.loss(yhatb, yb.float())
+                lossb = self.learn.loss(yhatb, yb)
+                
+                self.cb_handler.on_loss_end(lossb=lossb)
+                
+                self.cb_handler.on_backward_begin(model=self.learn.model)
+                lossb = self.cb_handler.state_dict['lossb']
 
                 # compute the smoothed loss
                 avg_loss = beta * avg_loss + (1-beta) * float(lossb)
@@ -104,6 +117,7 @@ class Trainer:
         )
         
         self.load_from_pth('temp.pth')
+        os.remove('temp.pth')
         
     def set_lr(self, lr):
         for param_group in self.learn.opt.param_groups:
@@ -113,19 +127,41 @@ class Trainer:
         
         self.cb_handler.on_train_begin()
     
-        for epoch in tqdm_notebook(range(num_epoch), desc='Overall Progress'):
+        for epoch in tqdm_notebook(range(num_epoch), desc='Overall progress', leave=False):
 
             self.cb_handler.on_epoch_begin()
 
             # ========== train ==========
-
-            self.learn.model.train()
-            for xb, yb in tqdm_notebook(self.learn.train_dl, desc='Training', leave=False):
-
+            
+            desc_func = lambda loss : f'Training | Loss : {loss:.3g} | Progress'
+            # loss is computed using np.mean(lossb_s[-20:])
+            pbar = tqdm_notebook(self.learn.train_dl, desc=desc_func(9999), leave=False)
+            
+            counter = 0
+            lossb_s = []
+            
+            for xb, yb in pbar:
+            
+                self.learn.model.train()
+            
+                self.cb_handler.on_batch_begin(xb=xb, yb=yb, bs=yb.size(0))
+                
                 yhatb = self.learn.model(xb.float())
-                lossb = self.learn.loss(yhatb, yb.float())
-
+                lossb = self.learn.loss(yhatb, yb)
+               
+                lossb_s.append(float(lossb))
+                if counter % 5 == 0:
+                    pbar.set_description(desc_func(np.mean(lossb_s[-20:])))  # ensure that the training loss isn't diverging
+                    pbar.update()
+                counter += 1
+                
+                self.cb_handler.on_loss_end(lossb=lossb)  # in case the loss term needs modification
+                
+                # in case model parameters are required to compute additional loss terms (e.g., jacobian, hessian)
+                self.cb_handler.on_backward_begin(model=self.learn.model)
+                lossb = self.cb_handler.state_dict['lossb']
                 lossb.backward()
+                
                 self.learn.opt.step()
                 self.learn.opt.zero_grad()
 
@@ -134,19 +170,19 @@ class Trainer:
             self.learn.model.eval()
             for xb, yb in tqdm_notebook(self.learn.valid_dl, desc='Validation', leave=False):
                 
-                self.cb_handler.on_batch_begin(yb=yb, bs=yb.size(0))  
+                self.cb_handler.eval_on_batch_begin(xb=xb, yb=yb, bs=yb.size(0))  
                 # yb: for computing accuracy (in AccuracyCallback)
                 # bs: for weighting any metric
                 
                 yhatb = self.learn.model(xb.float())
-                self.cb_handler.on_forward_end(yhatb=yhatb)  
+                self.cb_handler.eval_on_forward_end(yhatb=yhatb)  
                 # yhatb: for computing accuracy (in AccuracyCallback)
                 
-                lossb = self.learn.loss(yhatb, yb.float())
-                self.cb_handler.on_loss_end(lossb=lossb)  
+                lossb = self.learn.loss(yhatb, yb)
+                self.cb_handler.eval_on_loss_end(lossb=lossb)  
                 # lossb: for plotting loss  (in LossCallback)
                 
-                self.cb_handler.on_batch_end()
+                self.cb_handler.eval_on_batch_end()
                 
             self.cb_handler.on_epoch_end()
             
